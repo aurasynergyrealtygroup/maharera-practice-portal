@@ -6,7 +6,7 @@
 // 1) Paste your deployed Google Apps Script Web App URL below.
 //    Deploy > New deployment > Web app > Execute as: Me > Access: Anyone
 const CONFIG = {
-  API_URL: "https://github.com/aurasynergyrealtygroup/maharera-practice-portal/blob/main/js/app.js/exec",
+  API_URL: "https://script.google.com/macros/s/AKfycbzyO9W8SBtilPN9lkNaziwnqnXMlQhNU8mxuxQQfE2kYce5-724EsdGm424MNbf2E7w/exec",
   RAZORPAY_KEY: "PASTE_YOUR_RAZORPAY_KEY_ID_HERE",
   EXAM_FEE_INR: 600,
   TOTAL_QUESTIONS: 25,
