@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin sign in — MahaRERA Practice Portal</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<div class="auth-shell" style="background:var(--navy-deep);">
+  <div class="auth-card">
+    <svg class="stamp" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="#C79A3C" stroke-width="3"/><path d="M35 52 L45 62 L67 38" fill="none" stroke="#C79A3C" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <h1>Admin console</h1>
+    <p class="sub">Restricted access — MahaRERA Practice Portal staff only.</p>
+
+    <div class="form-msg" id="formMsg"></div>
+
+    <form id="adminLoginForm">
+      <div class="field">
+        <label for="mobile">Admin mobile number</label>
+        <input type="tel" id="mobile" required placeholder="Registered admin number">
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" required placeholder="Admin password">
+      </div>
+      <button type="submit" class="btn btn-primary btn-full" id="submitBtn">Sign in</button>
+    </form>
+
+    <div class="auth-switch"><a href="../index.html">← Back to main site</a></div>
+  </div>
+</div>
+
+<script src="../js/app.js"></script>
+<script src="../js/admin.js"></script>
+<script>
+document.getElementById("adminLoginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById("formMsg");
+  const btn = document.getElementById("submitBtn");
+  hideMsg(msg);
+  setBtnLoading(btn, true);
+  try {
+    const data = await adminApi("adminLogin", {
+      mobile: document.getElementById("mobile").value.trim(),
+      password: document.getElementById("password").value
+    });
+    setAdminSession(data.admin, data.token);
+    window.location.href = "dashboard.html";
+  } catch (err) {
+    showMsg(msg, err.message);
+  } finally {
+    setBtnLoading(btn, false, "Sign in");
+  }
+});
+</script>
+</body>
+</html>

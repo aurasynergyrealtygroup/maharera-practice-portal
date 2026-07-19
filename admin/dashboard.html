@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin dashboard — MahaRERA Practice Portal</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-side">
+    <div class="brand">
+      <svg class="brand-seal" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="#C79A3C" stroke-width="3"/><path d="M35 52 L45 62 L67 38" fill="none" stroke="#E4C77E" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="brand-text"><strong style="color:#fff;">Admin</strong><span>Practice Portal</span></span>
+    </div>
+    <a href="dashboard.html" data-nav="dashboard.html">Overview</a>
+    <a href="users.html" data-nav="users.html">Users</a>
+    <a href="questions.html" data-nav="questions.html">Questions</a>
+    <a href="payments.html" data-nav="payments.html">Payments</a>
+    <a href="results.html" data-nav="results.html">Results</a>
+    <a href="#" id="adminLogoutBtn" style="margin-top:24px;border-top:1px solid var(--navy-2);padding-top:20px;">Sign out</a>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-topbar">
+      <div>
+        <div class="eyebrow">Signed in as <span id="adminName">—</span></div>
+        <h1 style="font-size:26px;">Overview</h1>
+      </div>
+      <a href="../index.html" class="btn btn-outline">View site</a>
+    </div>
+
+    <div class="form-msg error" id="pageError" style="display:none;"></div>
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="label">Total users</div><div class="value" id="statUsers">—</div></div>
+      <div class="stat-card"><div class="label">Paid users</div><div class="value" id="statPaid">—</div></div>
+      <div class="stat-card"><div class="label">Total attempts</div><div class="value" id="statAttempts">—</div></div>
+      <div class="stat-card"><div class="label">Pass rate</div><div class="value" id="statPassRate">—</div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Recent attempts</h2><a href="results.html" class="small">View all →</a></div>
+      <table class="ledger">
+        <thead><tr><th>User</th><th>Exam ID</th><th>Date</th><th>Score</th><th>Result</th></tr></thead>
+        <tbody id="recentBody"><tr><td colspan="5" class="small">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<script src="../js/app.js"></script>
+<script src="../js/admin.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+  requireAdminAuth();
+  try {
+    const data = await adminApi("adminOverview");
+    document.getElementById("statUsers").textContent = data.totalUsers;
+    document.getElementById("statPaid").textContent = data.paidUsers;
+    document.getElementById("statAttempts").textContent = data.totalAttempts;
+    document.getElementById("statPassRate").textContent = data.passRate + "%";
+
+    const tbody = document.getElementById("recentBody");
+    tbody.innerHTML = "";
+    if (!data.recent || data.recent.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="small">No attempts yet.</td></tr>';
+    } else {
+      data.recent.forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${r.name}</td><td style="font-family:var(--mono)">${r.examId}</td><td>${formatDate(r.date)}</td><td>${r.score}/100</td><td><span class="tag ${r.result === 'PASS' ? 'green' : 'red'}">${r.result}</span></td>`;
+        tbody.appendChild(tr);
+      });
+    }
+  } catch (err) {
+    document.getElementById("pageError").textContent = err.message;
+    document.getElementById("pageError").style.display = "block";
+  }
+});
+</script>
+</body>
+</html>

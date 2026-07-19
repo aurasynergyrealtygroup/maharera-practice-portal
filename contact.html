@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact — MahaRERA Practice Portal</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <a href="index.html" class="brand">
+      <svg class="brand-seal" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="#C79A3C" stroke-width="3"/><circle cx="50" cy="50" r="36" fill="none" stroke="#C79A3C" stroke-width="1"/><path d="M35 52 L45 62 L67 38" fill="none" stroke="#E4C77E" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="brand-text"><strong>MahaRERA Practice</strong><span>Registered Agent Prep Portal</span></span>
+    </a>
+    <nav class="nav-links">
+      <a href="index.html" data-nav="index.html">Home</a>
+      <a href="pricing.html" data-nav="pricing.html">Pricing</a>
+      <a href="contact.html" data-nav="contact.html">Contact</a>
+      <span id="navAuthSlot" style="display:contents;">
+        <a href="login.html" data-nav="login.html">Sign in</a>
+        <a href="register.html" class="nav-cta">Register</a>
+      </span>
+    </nav>
+  </div>
+</header>
+
+<section class="section">
+  <div class="container contact-grid">
+    <div>
+      <div class="eyebrow">Get in touch</div>
+      <h2>Questions about attempts, payments, or results?</h2>
+      <p>Reach out and we'll get back to you within one business day.</p>
+      <table class="ledger" style="margin-top:24px;">
+        <tbody>
+          <tr><td>Email</td><td>support@maharera-practice.example</td></tr>
+          <tr><td>Hours</td><td>Mon–Sat, 9:00 AM – 7:00 PM IST</td></tr>
+          <tr><td>Response time</td><td>Within 1 business day</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="form-msg" id="formMsg"></div>
+      <form id="contactForm">
+        <div class="field"><label for="cName">Name</label><input type="text" id="cName" required></div>
+        <div class="field"><label for="cEmail">Email</label><input type="email" id="cEmail" required></div>
+        <div class="field"><label for="cMsg">Message</label><textarea id="cMsg" rows="5" required style="width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:4px;background:var(--cream);"></textarea></div>
+        <button type="submit" class="btn btn-primary btn-full" id="submitBtn">Send message</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<script src="js/app.js"></script>
+<script>
+document.getElementById("contactForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById("formMsg");
+  const btn = document.getElementById("submitBtn");
+  hideMsg(msg);
+  setBtnLoading(btn, true);
+  try {
+    await api("contactMessage", {
+      name: document.getElementById("cName").value.trim(),
+      email: document.getElementById("cEmail").value.trim(),
+      message: document.getElementById("cMsg").value.trim()
+    });
+    showMsg(msg, "Message sent — we'll be in touch shortly.", "success");
+    e.target.reset();
+  } catch (err) {
+    showMsg(msg, err.message);
+  } finally {
+    setBtnLoading(btn, false, "Send message");
+  }
+});
+</script>
+</body>
+</html>

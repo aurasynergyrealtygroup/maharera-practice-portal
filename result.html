@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your result — MahaRERA Practice Portal</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <a href="index.html" class="brand">
+      <svg class="brand-seal" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="#C79A3C" stroke-width="3"/><circle cx="50" cy="50" r="36" fill="none" stroke="#C79A3C" stroke-width="1"/><path d="M35 52 L45 62 L67 38" fill="none" stroke="#E4C77E" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="brand-text"><strong>MahaRERA Practice</strong><span>Registered Agent Prep Portal</span></span>
+    </a>
+    <nav class="nav-links">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="profile.html">Profile</a>
+      <a href="#" id="logoutBtn" class="nav-cta">Sign out</a>
+    </nav>
+  </div>
+</header>
+
+<div class="container">
+  <div class="result-hero" id="resultHero">
+    <p>Loading your result…</p>
+  </div>
+
+  <div class="card" style="max-width:640px;margin:0 auto 60px;" id="resultDetail"></div>
+
+  <div class="text-center" style="margin-bottom:60px;">
+    <a href="dashboard.html" class="btn btn-outline">Back to dashboard</a>
+    <a href="exam.html" class="btn btn-primary" id="retakeBtn" style="margin-left:12px;">Retake test</a>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+  requireAuth();
+  document.getElementById("logoutBtn").addEventListener("click", () => { clearSession(); window.location.href = "login.html"; });
+
+  const params = new URLSearchParams(window.location.search);
+  const examId = params.get("examId");
+  const hero = document.getElementById("resultHero");
+  const detail = document.getElementById("resultDetail");
+
+  if (!examId) {
+    hero.innerHTML = '<p>No result specified. <a href="dashboard.html">Return to dashboard</a>.</p>';
+    return;
+  }
+
+  try {
+    const r = await api("getResult", { examId });
+    const pass = r.result === "PASS";
+
+    hero.innerHTML = `
+      <svg class="result-badge" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="46" fill="none" stroke="${pass ? '#1E7A46' : '#B23A32'}" stroke-width="3"/>
+        <circle cx="50" cy="50" r="38" fill="none" stroke="${pass ? '#1E7A46' : '#B23A32'}" stroke-width="1" stroke-dasharray="2 5"/>
+        ${pass
+          ? '<path d="M32 52 L44 64 L70 36" fill="none" stroke="#1E7A46" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>'
+          : '<path d="M36 36 L64 64 M64 36 L36 64" fill="none" stroke="#B23A32" stroke-width="7" stroke-linecap="round"/>'}
+      </svg>
+      <div class="result-status ${pass ? 'pass' : 'fail'}">${pass ? 'Passed' : 'Not yet — keep practising'}</div>
+      <p style="max-width:420px;margin:0 auto;">${pass ? 'You cleared the pass mark of ' + CONFIG.PASS_MARKS + '/100. Well prepared.' : 'You scored below the pass mark of ' + CONFIG.PASS_MARKS + '/100. Review your weak areas and try again.'}</p>
+      <div class="result-grid">
+        <div class="cell"><div class="num">${r.score}</div><div class="lab">Marks / 100</div></div>
+        <div class="cell"><div class="num">${r.correct}</div><div class="lab">Correct</div></div>
+        <div class="cell"><div class="num">${r.wrong}</div><div class="lab">Wrong</div></div>
+        <div class="cell"><div class="num">${r.attemptNumber} / ${CONFIG.MAX_ATTEMPTS}</div><div class="lab">Attempt</div></div>
+      </div>
+    `;
+
+    detail.innerHTML = `
+      <table class="ledger">
+        <tbody>
+          <tr><td>Exam ID</td><td style="font-family:var(--mono)">${r.examId}</td></tr>
+          <tr><td>Date</td><td>${formatDate(r.date)}</td></tr>
+          <tr><td>Percentage</td><td>${r.score}%</td></tr>
+          <tr><td>Time taken</td><td>${r.timeTakenMinutes} minutes</td></tr>
+        </tbody>
+      </table>
+    `;
+
+    if (r.attemptNumber >= CONFIG.MAX_ATTEMPTS) {
+      document.getElementById("retakeBtn").style.display = "none";
+    }
+  } catch (err) {
+    hero.innerHTML = `<div class="form-msg error" style="display:block;max-width:480px;margin:0 auto;">${err.message}</div>`;
+  }
+});
+</script>
+</body>
+</html>
