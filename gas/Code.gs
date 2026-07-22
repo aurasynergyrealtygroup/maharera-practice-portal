@@ -374,6 +374,11 @@ function doCreateOrder(body, userId) {
   const props = PropertiesService.getScriptProperties();
   const keyId = props.getProperty("RAZORPAY_KEY_ID");
   const keySecret = props.getProperty("RAZORPAY_KEY_SECRET");
+
+  case "contactMessage":   data = doContactMessage(body); break;
+  case "checkConfig":      data = doCheckConfig(); break;
+
+
   if (!keyId || !keySecret) throw new Error("Payments are not configured yet. Contact support.");
 
   const receipt = "rcpt_" + userId + "_" + Date.now();
@@ -388,7 +393,12 @@ function doCreateOrder(body, userId) {
   if (!order.id) throw new Error("Could not create payment order. Please try again.");
   return { orderId: order.id, amount: order.amount };
 }
-
+function doCheckConfig() {
+  const props = PropertiesService.getScriptProperties();
+  return {
+    paymentsConfigured: !!(props.getProperty("RAZORPAY_KEY_ID") && props.getProperty("RAZORPAY_KEY_SECRET"))
+  };
+}
 function doVerifyPayment(body, userId) {
   const props = PropertiesService.getScriptProperties();
   const keySecret = props.getProperty("RAZORPAY_KEY_SECRET");
