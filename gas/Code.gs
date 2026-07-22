@@ -9,12 +9,12 @@
 // CONFIG
 // ---------------------------------------------------------------
 const CFG = {
-  TOTAL_QUESTIONS: 25,
+  TOTAL_QUESTIONS: 50,
   MARKS_PER_QUESTION: 2,
-  PASS_MARKS: 20,
+  PASS_MARKS: 40,
   TIME_LIMIT_MINUTES: 60,
   DEFAULT_ATTEMPTS_ON_PAYMENT: 5,
-  EXAM_FEE_PAISE: 60000, // ₹600.00 in paise
+  EXAM_FEE_PAISE: 30000, // ₹300.00 in paise
   TOKEN_TTL_HOURS: 24 * 7,      // user tokens valid 7 days
   ADMIN_TOKEN_TTL_HOURS: 24     // admin tokens valid 1 day
 };
