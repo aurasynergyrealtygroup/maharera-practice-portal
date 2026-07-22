@@ -7,7 +7,7 @@
 //    Deploy > New deployment > Web app > Execute as: Me > Access: Anyone
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbzyO9W8SBtilPN9lkNaziwnqnXMlQhNU8mxuxQQfE2kYce5-724EsdGm424MNbf2E7w/exec",
-  RAZORPAY_KEY: "rzp_test_TGWRHbne4RzEUk",
+   RAZORPAY_KEY: "rzp_test_TGWRHbne4RzEUk",
   EXAM_FEE_INR: 300,
   TOTAL_QUESTIONS: 50,
   MARKS_PER_QUESTION: 2,
