@@ -379,7 +379,7 @@ function doCreateOrder(body, userId) {
   case "checkConfig":      data = doCheckConfig(); break;
 
 
-  if (!keyId || !keySecret) throw new Error("Payments are not configured yet. Contact support.");
+  if (!keyId || !keySecret) throw new Error("Payments are not configured yet. Contact support "+keyId+".");
 
   const receipt = "rcpt_" + userId + "_" + Date.now();
   const res = UrlFetchApp.fetch("https://api.razorpay.com/v1/orders", {
