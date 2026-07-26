@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backend Diagnostic — MahaRERA Practice Portal</title>
+<style>
+  body { font-family: -apple-system, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 20px; background: #F7F4EC; color: #1B1E22; }
+  h1 { font-size: 22px; }
+  .card { background: #fff; border: 1px solid #DCD5C1; border-radius: 6px; padding: 20px; margin-bottom: 16px; }
+  button { background: #0F2A3D; color: #fff; border: none; padding: 12px 20px; border-radius: 4px; font-size: 15px; cursor: pointer; margin-right: 10px; }
+  button:hover { background: #16405C; }
+  pre { background: #0A1E2B; color: #7FE0A8; padding: 14px; border-radius: 4px; white-space: pre-wrap; word-break: break-word; font-size: 13px; min-height: 20px; }
+  .label { font-family: monospace; font-size: 12px; color: #55605C; margin-bottom: 8px; }
+  input { padding: 8px 10px; border: 1px solid #DCD5C1; border-radius: 4px; margin-right: 8px; width: 200px; }
+</style>
+</head>
+<body>
+
+<h1>🔧 Backend Diagnostic Panel</h1>
+<p>Click each button below. The result appears directly on this page — no browser console needed.</p>
+
+<div class="card">
+  <div class="label">Current API_URL (from js/app.js on this deployed site):</div>
+  <pre id="urlDisplay">loading…</pre>
+</div>
+
+<div class="card">
+  <strong>Test 1 — Is the backend reachable at all?</strong>
+  <p style="font-size:14px;color:#55605C;">Sends a harmless "contactMessage" test.</p>
+  <button onclick="runTest('contactMessage', {name:'Diagnostic', email:'test@test.com', message:'ping'})">Run Test 1</button>
+  <pre id="result1">(not run yet)</pre>
+</div>
+
+<div class="card">
+  <strong>Test 2 — Are Razorpay keys configured?</strong>
+  <button onclick="runTest('checkConfig', {})">Run Test 2</button>
+  <pre id="result2">(not run yet)</pre>
+</div>
+
+<div class="card">
+  <strong>Test 3 — Does password reset work?</strong>
+  <p style="font-size:14px;color:#55605C;">Mobile number to test with:</p>
+  <input type="text" id="testMobile" value="9999999999">
+  <button onclick="runTest3()">Run Test 3</button>
+  <pre id="result3">(not run yet)</pre>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+document.getElementById("urlDisplay").textContent = CONFIG.API_URL;
+
+async function runTest(action, payload, resultId) {
+  const id = resultId || ({contactMessage:"result1", checkConfig:"result2"})[action];
+  const el = document.getElementById(id);
+  el.textContent = "Running…";
+  try {
+    const res = await fetch(CONFIG.API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action, ...payload })
+    });
+    const data = await res.json();
+    el.textContent = JSON.stringify(data, null, 2);
+  } catch (err) {
+    el.textContent = "FETCH ERROR: " + err.message;
+  }
+}
+
+function runTest3() {
+  const mobile = document.getElementById("testMobile").value.trim();
+  runTest("requestPasswordReset", { mobile }, "result3");
+}
+</script>
+</body>
+</html>
