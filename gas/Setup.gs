@@ -98,9 +98,19 @@ function seedSampleQuestions(ss) {
  * Project Settings > Script Properties in the Apps Script UI instead.
  */
 function setRazorpayKeys() {
-  PropertiesService.getScriptProperties().setProperties({
-    RAZORPAY_KEY_ID: "PASTE_YOUR_RAZORPAY_KEY_ID",
-    RAZORPAY_KEY_SECRET: "PASTE_YOUR_RAZORPAY_KEY_SECRET"
-  });
-  Logger.log("Razorpay keys saved to Script Properties.");
+  try {
+    var props = PropertiesService.getScriptProperties();
+    props.setProperty("RAZORPAY_KEY_ID", "rzp_test_TGWRHbne4RzEUk");
+    props.setProperty("RAZORPAY_KEY_SECRET", "8QtVwVBV2SNVVXDY3WqzSj2H");
+
+    // Read them straight back to prove they actually saved
+    var checkId = props.getProperty("RAZORPAY_KEY_ID");
+    var checkSecret = props.getProperty("RAZORPAY_KEY_SECRET");
+
+    Logger.log("SAVED KEY_ID: " + checkId);
+    Logger.log("SAVED KEY_SECRET length: " + (checkSecret ? checkSecret.length : "MISSING"));
+    Logger.log("SUCCESS — Razorpay keys are saved and confirmed.");
+  } catch (err) {
+    Logger.log("FAILED — error was: " + err.message);
+  }
 }
