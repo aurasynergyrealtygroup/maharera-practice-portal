@@ -13,7 +13,7 @@ const CFG = {
   MARKS_PER_QUESTION: 2,
   PASS_MARKS: 40,
   TIME_LIMIT_MINUTES: 60,
-  DEFAULT_ATTEMPTS_ON_PAYMENT: 5,
+  DEFAULT_ATTEMPTS_ON_PAYMENT: 10,
   EXAM_FEE_PAISE: 30000, // ₹300.00 in paise
   TOKEN_TTL_HOURS: 24 * 7,      // user tokens valid 7 days
   ADMIN_TOKEN_TTL_HOURS: 24     // admin tokens valid 1 day
@@ -48,12 +48,16 @@ function doPost(e) {
       case "register":        data = doRegister(body); break;
       case "login":            data = doLogin(body); break;
       case "contactMessage":   data = doContactMessage(body); break;
+      case "checkConfig":      data = doCheckConfig(); break;
+      case "requestPasswordReset": data = doRequestPasswordReset(body); break;
+      case "resetPassword":        data = doResetPassword(body); break;
 
       // ---- Authenticated user actions ----
       case "dashboard":        data = withUser(body, doDashboard); break;
       case "startExam":        data = withUser(body, doStartExam); break;
       case "submitExam":       data = withUser(body, doSubmitExam); break;
       case "getResult":        data = withUser(body, doGetResult); break;
+      case "getReview":        data = withUser(body, doGetReview); break;
       case "changePassword":   data = withUser(body, doChangePassword); break;
       case "createOrder":      data = withUser(body, doCreateOrder); break;
       case "verifyPayment":    data = withUser(body, doVerifyPayment); break;
@@ -208,9 +212,9 @@ function doRegister(body) {
   appendRow(SHEETS.USERS, {
     UserID: userId, Name: name, Mobile: mobile, Email: email,
     PasswordHash: hashPassword(password, salt), Salt: salt,
-    Paid: "No", AllowedAttempts: 0, UsedAttempts: 0, Blocked: "No",
+    Paid: "No", AllowedAttempts: 1, UsedAttempts: 0, Blocked: "No",
     CreatedAt: new Date().toISOString()
-  }, ["UserID","Name","Mobile","Email","PasswordHash","Salt","Paid","AllowedAttempts","UsedAttempts","Blocked","CreatedAt"]);
+  }, ["UserID","Name","Mobile","Email","PasswordHash","Salt","Paid","AllowedAttempts","UsedAttempts","Blocked","CreatedAt","ResetCode","ResetExpiry"]);
 
   const token = makeToken(userId, "U", CFG.TOKEN_TTL_HOURS);
   return { user: { userId, name, mobile, email }, token };
@@ -242,6 +246,67 @@ function doChangePassword(body, userId) {
     Salt: newSalt
   });
   return { updated: true };
+}
+
+// ---- Forgot password (public, no login required) ----
+// Step 1: user submits their mobile number -> we email a 6-digit code to
+//         the address on file (never reveal whether the mobile exists).
+// Step 2: user submits mobile + code + new password -> we verify the code
+//         and its expiry, then set the new password.
+function doRequestPasswordReset(body) {
+  const mobile = (body.mobile || "").trim();
+  const users = readRows(SHEETS.USERS);
+  const u = users.find(x => String(x.Mobile) === mobile);
+
+  // Always return the same generic response whether or not the account
+  // exists, so this endpoint can't be used to check which numbers are registered.
+  if (!u || !u.Email) {
+    return { sent: true };
+  }
+
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const expiry = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+  updateRowByField(SHEETS.USERS, "Mobile", mobile, {
+    ResetCode: code,
+    ResetExpiry: expiry
+  });
+
+  MailApp.sendEmail({
+    to: u.Email,
+    subject: "Your MahaRERA Practice Portal password reset code",
+    body:
+      "Hi " + u.Name + ",\n\n" +
+      "Your password reset code is: " + code + "\n\n" +
+      "This code expires in 15 minutes. If you didn't request this, you can safely ignore this email.\n\n" +
+      "— MahaRERA Practice Portal"
+  });
+
+  return { sent: true };
+}
+
+function doResetPassword(body) {
+  const mobile = (body.mobile || "").trim();
+  const code = (body.code || "").trim();
+  const newPassword = body.newPassword || "";
+
+  if (newPassword.length < 6) throw new Error("New password must be at least 6 characters.");
+
+  const users = readRows(SHEETS.USERS);
+  const u = users.find(x => String(x.Mobile) === mobile);
+  if (!u || !u.ResetCode) throw new Error("Invalid or expired code. Please request a new one.");
+  if (String(u.ResetCode) !== code) throw new Error("Invalid or expired code. Please request a new one.");
+  if (Date.now() > Number(u.ResetExpiry)) throw new Error("This code has expired. Please request a new one.");
+
+  const newSalt = Utilities.getUuid();
+  updateRowByField(SHEETS.USERS, "Mobile", mobile, {
+    PasswordHash: hashPassword(newPassword, newSalt),
+    Salt: newSalt,
+    ResetCode: "",
+    ResetExpiry: ""
+  });
+
+  return { reset: true };
 }
 
 function doContactMessage(body) {
@@ -278,8 +343,12 @@ function doDashboard(body, userId) {
 function doStartExam(body, userId) {
   const u = readRows(SHEETS.USERS).find(x => x.UserID === userId);
   if (!u) throw new Error("User not found.");
-  if (String(u.Paid) !== "Yes") throw new Error("Please complete payment to start a practice test.");
-  if (Number(u.UsedAttempts) >= Number(u.AllowedAttempts)) throw new Error("You have used all your attempts.");
+  if (Number(u.UsedAttempts) >= Number(u.AllowedAttempts)) {
+    if (String(u.Paid) !== "Yes") {
+      throw new Error("Your free attempt has been used. Complete payment to unlock 10 more attempts.");
+    }
+    throw new Error("You have used all your attempts.");
+  }
 
   // Reads the ENTIRE Questions sheet — every row from the first question to
   // the last (global pool, currently up to 600) — shuffles it, then takes
@@ -308,7 +377,9 @@ function doStartExam(body, userId) {
     timeLimitMinutes: CFG.TIME_LIMIT_MINUTES,
     questions: picked.map(q => ({
       qid: q.QID, question: q.Question,
-      optionA: q.OptionA, optionB: q.OptionB, optionC: q.OptionC, optionD: q.OptionD
+      optionA: q.OptionA, optionB: q.OptionB, optionC: q.OptionC, optionD: q.OptionD,
+      questionMr: q.QuestionMr || "", optionAMr: q.OptionAMr || "", optionBMr: q.OptionBMr || "",
+      optionCMr: q.OptionCMr || "", optionDMr: q.OptionDMr || ""
     }))
   };
 }
@@ -340,8 +411,9 @@ function doSubmitExam(body, userId) {
   appendRow(SHEETS.RESULTS, {
     ExamID: examId, UserID: userId, SessionId: session.SessionId,
     Date: new Date().toISOString(), Score: score, Correct: correct, Wrong: wrong,
-    Result: result, AttemptNumber: attemptNumber, TimeTakenMinutes: timeTakenMinutes
-  }, ["ExamID","UserID","SessionId","Date","Score","Correct","Wrong","Result","AttemptNumber","TimeTakenMinutes"]);
+    Result: result, AttemptNumber: attemptNumber, TimeTakenMinutes: timeTakenMinutes,
+    SubmittedAnswers: JSON.stringify(submitted)
+  }, ["ExamID","UserID","SessionId","Date","Score","Correct","Wrong","Result","AttemptNumber","TimeTakenMinutes","SubmittedAnswers"]);
 
   updateRowByField(SHEETS.SESSIONS, "SessionId", session.SessionId, { Used: "Yes" });
   updateRowByField(SHEETS.USERS, "UserID", userId, { UsedAttempts: attemptNumber });
@@ -356,6 +428,40 @@ function doGetResult(body, userId) {
     examId: r.ExamID, date: r.Date, score: r.Score, correct: r.Correct, wrong: r.Wrong,
     result: r.Result, attemptNumber: r.AttemptNumber, timeTakenMinutes: r.TimeTakenMinutes
   };
+}
+
+// Full paper review: every question from that attempt, with the user's
+// submitted answer and the correct answer side by side so the UI can
+// color-code each option (correct in green, a wrong pick in red).
+function doGetReview(body, userId) {
+  const r = readRows(SHEETS.RESULTS).find(x => x.ExamID === body.examId && x.UserID === userId);
+  if (!r) throw new Error("Result not found.");
+
+  const session = readRows(SHEETS.SESSIONS).find(s => s.SessionId === r.SessionId);
+  if (!session) throw new Error("This attempt's question data is no longer available.");
+
+  const answerKey = JSON.parse(session.AnswerKey);
+  const submitted = r.SubmittedAnswers ? JSON.parse(r.SubmittedAnswers) : {};
+  const qids = session.QuestionIds.split(",");
+
+  const qMap = {};
+  readRows(SHEETS.QUESTIONS).forEach(q => { qMap[q.QID] = q; });
+
+  const items = qids.map(qid => {
+    const q = qMap[qid] || {};
+    const correctAnswer = answerKey[qid];
+    const submittedAnswer = submitted[qid] || null;
+    return {
+      qid,
+      question: q.Question || "", optionA: q.OptionA || "", optionB: q.OptionB || "",
+      optionC: q.OptionC || "", optionD: q.OptionD || "",
+      questionMr: q.QuestionMr || "", optionAMr: q.OptionAMr || "", optionBMr: q.OptionBMr || "",
+      optionCMr: q.OptionCMr || "", optionDMr: q.OptionDMr || "",
+      correctAnswer, submittedAnswer, isCorrect: submittedAnswer === correctAnswer
+    };
+  });
+
+  return { examId: r.ExamID, score: r.Score, result: r.Result, items };
 }
 
 function shuffle(arr) {
@@ -374,12 +480,7 @@ function doCreateOrder(body, userId) {
   const props = PropertiesService.getScriptProperties();
   const keyId = props.getProperty("RAZORPAY_KEY_ID");
   const keySecret = props.getProperty("RAZORPAY_KEY_SECRET");
-
-  case "contactMessage":   data = doContactMessage(body); break;
-  case "checkConfig":      data = doCheckConfig(); break;
-
-
-  if (!keyId || !keySecret) throw new Error("Payments are not configured yet. Contact support "+keyId+".");
+  if (!keyId || !keySecret) throw new Error("Payments are not configured yet. Contact support.");
 
   const receipt = "rcpt_" + userId + "_" + Date.now();
   const res = UrlFetchApp.fetch("https://api.razorpay.com/v1/orders", {
@@ -393,12 +494,7 @@ function doCreateOrder(body, userId) {
   if (!order.id) throw new Error("Could not create payment order. Please try again.");
   return { orderId: order.id, amount: order.amount };
 }
-function doCheckConfig() {
-  const props = PropertiesService.getScriptProperties();
-  return {
-    paymentsConfigured: !!(props.getProperty("RAZORPAY_KEY_ID") && props.getProperty("RAZORPAY_KEY_SECRET"))
-  };
-}
+
 function doVerifyPayment(body, userId) {
   const props = PropertiesService.getScriptProperties();
   const keySecret = props.getProperty("RAZORPAY_KEY_SECRET");
@@ -409,7 +505,7 @@ function doVerifyPayment(body, userId) {
   if (expectedSig !== body.razorpay_signature) throw new Error("Payment signature verification failed.");
 
   const u = readRows(SHEETS.USERS).find(x => x.UserID === userId);
-  const newAllowed = Math.max(Number(u.AllowedAttempts) || 0, CFG.DEFAULT_ATTEMPTS_ON_PAYMENT);
+  const newAllowed = (Number(u.AllowedAttempts) || 0) + CFG.DEFAULT_ATTEMPTS_ON_PAYMENT;
   updateRowByField(SHEETS.USERS, "UserID", userId, { Paid: "Yes", AllowedAttempts: newAllowed });
 
   appendRow(SHEETS.PAYMENTS, {
@@ -484,8 +580,10 @@ function doAdminAddQuestion(body) {
   const qid = newId("Q");
   appendRow(SHEETS.QUESTIONS, {
     QID: qid, Question: body.question, OptionA: body.optionA, OptionB: body.optionB,
-    OptionC: body.optionC, OptionD: body.optionD, Answer: body.answer, Marks: CFG.MARKS_PER_QUESTION
-  }, ["QID","Question","OptionA","OptionB","OptionC","OptionD","Answer","Marks"]);
+    OptionC: body.optionC, OptionD: body.optionD, Answer: body.answer, Marks: CFG.MARKS_PER_QUESTION,
+    QuestionMr: body.questionMr || "", OptionAMr: body.optionAMr || "", OptionBMr: body.optionBMr || "",
+    OptionCMr: body.optionCMr || "", OptionDMr: body.optionDMr || ""
+  }, ["QID","Question","OptionA","OptionB","OptionC","OptionD","Answer","Marks","QuestionMr","OptionAMr","OptionBMr","OptionCMr","OptionDMr"]);
   return { qid };
 }
 function doAdminUpdateQuestion(body) {
@@ -530,4 +628,14 @@ function doAdminListResults() {
   const passed = results.filter(r => r.result === "PASS").length;
   const avgScore = results.length ? Math.round(results.reduce((s, r) => s + Number(r.score), 0) / results.length) : 0;
   return { results: results.reverse(), total: results.length, passed, failed: results.length - passed, avgScore };
+}
+
+// ================================================================
+// DIAGNOSTIC (safe to leave in — reveals no secrets, just true/false)
+// ================================================================
+function doCheckConfig() {
+  const props = PropertiesService.getScriptProperties();
+  return {
+    paymentsConfigured: !!(props.getProperty("RAZORPAY_KEY_ID") && props.getProperty("RAZORPAY_KEY_SECRET"))
+  };
 }

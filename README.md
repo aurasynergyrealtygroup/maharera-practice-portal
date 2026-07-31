@@ -1,6 +1,6 @@
 # MahaRERA Practice Test Portal
 
-A full practice-exam portal: register → pay ₹600 → sit timed 50-question mocks (5 attempts) → instant scoring → admin panel.
+A full practice-exam portal: register → pay ₹300 → sit timed 25-question mocks drawn from a 600-question bank (5 attempts) → instant scoring → admin panel.
 
 **Stack:** static HTML/CSS/JS frontend (deploy anywhere, e.g. Cloudflare Pages) + Google Apps Script backend + Google Sheets as the database + Razorpay for payment.
 
@@ -74,7 +74,7 @@ From there you can manage:
 | Passing score | 20 / 50 (40%) | `CFG.PASS_MARKS` |
 | Time limit | 60 minutes | `CFG.TIME_LIMIT_MINUTES` |
 | Attempts per user (after payment) | 5 | `CFG.DEFAULT_ATTEMPTS_ON_PAYMENT` |
-| Fee | ₹600 | `CFG.EXAM_FEE_PAISE` and `CONFIG.EXAM_FEE_INR` |
+| Fee | ₹300 | `CFG.EXAM_FEE_PAISE` and `CONFIG.EXAM_FEE_INR` |
 
 **How the 25-from-600 selection works:** `doStartExam()` in `Code.gs` reads every row of the `Questions` sheet — the entire global bank, start to end — shuffles it, and takes the first 25. So each attempt is a fresh, independent random draw from all 600 questions, not from a fixed slice or a rotating block.
 
@@ -87,10 +87,11 @@ maharera-practice/
 ├── index.html            Homepage
 ├── register.html          Sign up
 ├── login.html              Sign in
+├── forgot-password.html    Forgot password (email code + reset)
 ├── dashboard.html          User dashboard, attempt history
 ├── exam.html                Timed 50-question test
 ├── result.html               Score + pass/fail
-├── pricing.html              ₹600 checkout (Razorpay)
+├── pricing.html              ₹300 checkout (Razorpay)
 ├── profile.html               Account + change password
 ├── contact.html                 Contact form
 ├── admin/
@@ -122,3 +123,13 @@ maharera-practice/
 - Exam answer keys never reach the browser — only question text and options are sent; scoring happens entirely server-side in `Code.gs`.
 - Payment amounts are set server-side (`CFG.EXAM_FEE_PAISE`) and verified via Razorpay's HMAC signature — the browser cannot alter the charged amount.
 - The default admin password (`Admin@123`) is a placeholder. Treat the spreadsheet itself as sensitive (it holds password hashes) and don't share edit access broadly.
+
+## 9. Password reset
+
+`forgot-password.html` lets a user reset their password without being logged in:
+1. They enter their mobile number → the backend emails a 6-digit code (via `MailApp.sendEmail`, sent from your Google account) to the email on file — it never reveals whether that mobile number exists, so it can't be used to check who's registered.
+2. They enter the code + a new password → backend verifies the code and its 15-minute expiry, then updates the password.
+
+**If you set up your Sheet before this update:** the `Users` tab needs two extra columns, `ResetCode` and `ResetExpiry`, added after `CreatedAt`. Either add them by hand (exact spelling matters), or just re-run `setupSheets()` — it only creates sheets/headers that don't already exist, so it's safe to re-run on a sheet that already has data.
+
+Also re-paste the updated `gas/Code.gs` into Apps Script and **redeploy** (Deploy → Manage deployments → edit → Deploy) — like any other backend change, editing the file alone doesn't update the live endpoint.

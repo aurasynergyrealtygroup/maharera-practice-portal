@@ -20,19 +20,22 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const startBtn = document.getElementById("startTestBtn");
     const notice = document.getElementById("startNotice");
+    const remaining = Math.max(0, data.allowedAttempts - data.usedAttempts);
 
-    if (!data.paid) {
-      startBtn.textContent = "Unlock with payment — ₹" + CONFIG.EXAM_FEE_INR;
+    if (remaining > 0) {
+      startBtn.textContent = "Start practice test";
+      startBtn.onclick = () => window.location.href = "exam.html";
+      notice.textContent = (data.paid ? "" : "Free first attempt · ") +
+        "50 questions · " + CONFIG.TIME_LIMIT_MINUTES + " minutes · Pass mark " + CONFIG.PASS_MARKS + "/100 · " +
+        remaining + " attempt" + (remaining === 1 ? "" : "s") + " remaining";
+    } else if (!data.paid) {
+      startBtn.textContent = "Unlock 10 more attempts — ₹" + CONFIG.EXAM_FEE_INR;
       startBtn.onclick = () => window.location.href = "pricing.html";
-      notice.textContent = "Complete payment to unlock the full 50-question practice test.";
-    } else if (data.usedAttempts >= data.allowedAttempts) {
+      notice.textContent = "You've used your free attempt. Pay once to unlock 10 more practice attempts.";
+    } else {
       startBtn.disabled = true;
       startBtn.textContent = "No attempts remaining";
       notice.textContent = "You have used all " + data.allowedAttempts + " attempts. Contact support to request more.";
-    } else {
-      startBtn.textContent = "Start practice test";
-      startBtn.onclick = () => window.location.href = "exam.html";
-      notice.textContent = "50 questions · " + CONFIG.TIME_LIMIT_MINUTES + " minutes · Pass mark " + CONFIG.PASS_MARKS + "/100";
     }
 
     // Recent results table

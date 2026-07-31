@@ -58,7 +58,18 @@ function renderQuestion(idx) {
   const q = EXAM.questions[idx];
   document.getElementById("qMeta").textContent =
     `Question ${idx + 1} of ${EXAM.questions.length} · ${CONFIG.MARKS_PER_QUESTION} marks`;
-  document.getElementById("qText").textContent = q.question;
+
+  const qTextEl = document.getElementById("qText");
+  qTextEl.innerHTML = "";
+  const enLine = document.createElement("div");
+  enLine.textContent = q.question;
+  qTextEl.appendChild(enLine);
+  if (q.questionMr) {
+    const mrLine = document.createElement("div");
+    mrLine.className = "q-text-mr";
+    mrLine.textContent = q.questionMr;
+    qTextEl.appendChild(mrLine);
+  }
 
   const optsWrap = document.getElementById("optionsWrap");
   optsWrap.innerHTML = "";
@@ -66,7 +77,9 @@ function renderQuestion(idx) {
     const div = document.createElement("div");
     const selected = EXAM.answers[q.qid] === letter;
     div.className = "option" + (selected ? " selected" : "");
-    div.innerHTML = `<span class="opt-letter">${letter}</span><span>${q["option" + letter] || q[letter.toLowerCase()]}</span>`;
+    const enText = q["option" + letter] || q[letter.toLowerCase()];
+    const mrText = q["option" + letter + "Mr"];
+    div.innerHTML = `<span class="opt-letter">${letter}</span><span class="opt-text"><span class="opt-en">${enText}</span>${mrText ? `<span class="opt-mr">${mrText}</span>` : ""}</span>`;
     div.onclick = () => selectOption(letter);
     optsWrap.appendChild(div);
   });

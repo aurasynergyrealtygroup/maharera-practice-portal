@@ -6,7 +6,6 @@
 // 1) Paste your deployed Google Apps Script Web App URL below.
 //    Deploy > New deployment > Web app > Execute as: Me > Access: Anyone
 const CONFIG = {
-  
   API_URL: "https://script.google.com/macros/s/AKfycbwz7ZkoehjtgtiY3Y2mO1iSPf4_9mJAQW_iRh0zRId4CH5MGRElQETcz3w3B49CeYjS/exec",
   RAZORPAY_KEY: "rzp_test_TGWRHbne4RzEUk",
   EXAM_FEE_INR: 300,
@@ -14,7 +13,7 @@ const CONFIG = {
   MARKS_PER_QUESTION: 2,
   PASS_MARKS: 40,
   TIME_LIMIT_MINUTES: 60,
-  MAX_ATTEMPTS: 5
+  MAX_ATTEMPTS: 11
 };
 
 /**

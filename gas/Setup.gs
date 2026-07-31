@@ -8,13 +8,13 @@ function setupSheets() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
 
   createSheetWithHeaders(ss, "Users",
-    ["UserID","Name","Mobile","Email","PasswordHash","Salt","Paid","AllowedAttempts","UsedAttempts","Blocked","CreatedAt"]);
+    ["UserID","Name","Mobile","Email","PasswordHash","Salt","Paid","AllowedAttempts","UsedAttempts","Blocked","CreatedAt","ResetCode","ResetExpiry"]);
 
   createSheetWithHeaders(ss, "Questions",
-    ["QID","Question","OptionA","OptionB","OptionC","OptionD","Answer","Marks"]);
+    ["QID","Question","OptionA","OptionB","OptionC","OptionD","Answer","Marks","QuestionMr","OptionAMr","OptionBMr","OptionCMr","OptionDMr"]);
 
   createSheetWithHeaders(ss, "Results",
-    ["ExamID","UserID","SessionId","Date","Score","Correct","Wrong","Result","AttemptNumber","TimeTakenMinutes"]);
+    ["ExamID","UserID","SessionId","Date","Score","Correct","Wrong","Result","AttemptNumber","TimeTakenMinutes","SubmittedAnswers"]);
 
   createSheetWithHeaders(ss, "Payments",
     ["PaymentID","UserID","Amount","Status","Date","RazorpayOrderId","RazorpayPaymentId"]);
@@ -98,19 +98,9 @@ function seedSampleQuestions(ss) {
  * Project Settings > Script Properties in the Apps Script UI instead.
  */
 function setRazorpayKeys() {
-  try {
-    var props = PropertiesService.getScriptProperties();
-    props.setProperty("RAZORPAY_KEY_ID", "rzp_test_TGWRHbne4RzEUk");
-    props.setProperty("RAZORPAY_KEY_SECRET", "8QtVwVBV2SNVVXDY3WqzSj2H");
-
-    // Read them straight back to prove they actually saved
-    var checkId = props.getProperty("RAZORPAY_KEY_ID");
-    var checkSecret = props.getProperty("RAZORPAY_KEY_SECRET");
-
-    Logger.log("SAVED KEY_ID: " + checkId);
-    Logger.log("SAVED KEY_SECRET length: " + (checkSecret ? checkSecret.length : "MISSING"));
-    Logger.log("SUCCESS — Razorpay keys are saved and confirmed.");
-  } catch (err) {
-    Logger.log("FAILED — error was: " + err.message);
-  }
+  PropertiesService.getScriptProperties().setProperties({
+    RAZORPAY_KEY_ID: "PASTE_YOUR_RAZORPAY_KEY_ID",
+    RAZORPAY_KEY_SECRET: "PASTE_YOUR_RAZORPAY_KEY_SECRET"
+  });
+  Logger.log("Razorpay keys saved to Script Properties.");
 }

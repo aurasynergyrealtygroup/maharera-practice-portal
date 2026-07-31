@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Review your paper — MahaRERA Practice Portal</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .review-q{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:26px;margin-bottom:20px;}
+  .review-q-meta{font-family:var(--mono);font-size:12px;color:var(--gold);letter-spacing:.06em;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;}
+  .review-q-text{font-family:var(--display);font-size:18px;color:var(--navy-deep);margin-bottom:6px;}
+  .review-q-text-mr{font-family:'Noto Sans Devanagari','Inter',sans-serif;font-size:14.5px;color:var(--ink-soft);margin-bottom:18px;padding-bottom:14px;border-bottom:1px dashed var(--line);}
+  .review-opt{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius);margin-bottom:8px;}
+  .review-opt .letter{font-family:var(--mono);font-weight:600;font-size:12px;width:24px;height:24px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--ink-soft);}
+  .review-opt.correct{background:var(--green-soft);border-color:var(--green);}
+  .review-opt.correct .letter{background:var(--green);border-color:var(--green);color:#fff;}
+  .review-opt.wrong-pick{background:var(--red-soft);border-color:var(--red);}
+  .review-opt.wrong-pick .letter{background:var(--red);border-color:var(--red);color:#fff;}
+  .review-opt .tag-inline{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;margin-left:auto;padding:2px 8px;border-radius:10px;flex-shrink:0;}
+  .review-opt.correct .tag-inline{background:var(--green);color:#fff;}
+  .review-opt.wrong-pick .tag-inline{background:var(--red);color:#fff;}
+  .review-status{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:4px 10px;border-radius:12px;font-weight:600;}
+  .review-status.right{background:var(--green-soft);color:var(--green);}
+  .review-status.wrong{background:var(--red-soft);color:var(--red);}
+  .review-status.skipped{background:#F0EBDA;color:#8A6A1F;}
+  .filter-bar{display:flex;gap:10px;margin-bottom:24px;}
+  .filter-bar button{padding:8px 16px;border:1px solid var(--line);background:var(--paper);border-radius:20px;font-size:13px;color:var(--ink-soft);}
+  .filter-bar button.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <a href="index.html" class="brand">
+      <svg class="brand-seal" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="#C79A3C" stroke-width="3"/><circle cx="50" cy="50" r="36" fill="none" stroke="#C79A3C" stroke-width="1"/><path d="M35 52 L45 62 L67 38" fill="none" stroke="#E4C77E" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="brand-text"><strong>MahaRERA Practice</strong><span>Registered Agent Prep Portal</span></span>
+    </a>
+    <nav class="nav-links">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="#" id="logoutBtn" class="nav-cta">Sign out</a>
+    </nav>
+  </div>
+</header>
+
+<div class="container" style="padding-top:36px;max-width:760px;">
+  <div class="eyebrow">Full paper review</div>
+  <h1 style="font-size:26px;" id="pageTitle">Loading…</h1>
+
+  <div class="filter-bar" id="filterBar" style="display:none;">
+    <button class="active" data-filter="all">All questions</button>
+    <button data-filter="wrong">Wrong only</button>
+    <button data-filter="skipped">Skipped only</button>
+  </div>
+
+  <div id="reviewList">
+    <p class="small">Loading your paper…</p>
+  </div>
+
+  <div class="text-center" style="margin:32px 0 60px;">
+    <a href="dashboard.html" class="btn btn-outline">Back to dashboard</a>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+let REVIEW_ITEMS = [];
+
+document.addEventListener("DOMContentLoaded", async () => {
+  requireAuth();
+  document.getElementById("logoutBtn").addEventListener("click", () => { clearSession(); window.location.href = "login.html"; });
+
+  const params = new URLSearchParams(window.location.search);
+  const examId = params.get("examId");
+  const listEl = document.getElementById("reviewList");
+
+  if (!examId) {
+    listEl.innerHTML = '<p class="small">No exam specified. <a href="dashboard.html">Return to dashboard</a>.</p>';
+    return;
+  }
+
+  try {
+    const data = await api("getReview", { examId });
+    REVIEW_ITEMS = data.items;
+    document.getElementById("pageTitle").textContent =
+      `Review — ${data.examId} (${data.score} marks, ${data.result})`;
+    document.getElementById("filterBar").style.display = "flex";
+    renderItems("all");
+  } catch (err) {
+    listEl.innerHTML = `<div class="form-msg error" style="display:block;">${err.message}</div>`;
+  }
+});
+
+document.getElementById("filterBar").addEventListener("click", (e) => {
+  if (e.target.tagName !== "BUTTON") return;
+  document.querySelectorAll("#filterBar button").forEach(b => b.classList.remove("active"));
+  e.target.classList.add("active");
+  renderItems(e.target.dataset.filter);
+});
+
+function renderItems(filter) {
+  const listEl = document.getElementById("reviewList");
+  let items = REVIEW_ITEMS;
+  if (filter === "wrong") items = items.filter(i => i.submittedAnswer && !i.isCorrect);
+  if (filter === "skipped") items = items.filter(i => !i.submittedAnswer);
+
+  if (items.length === 0) {
+    listEl.innerHTML = '<p class="small">Nothing to show for this filter.</p>';
+    return;
+  }
+
+  listEl.innerHTML = items.map((it, idx) => {
+    const num = REVIEW_ITEMS.indexOf(it) + 1;
+    const status = !it.submittedAnswer
+      ? '<span class="review-status skipped">Skipped</span>'
+      : it.isCorrect
+        ? '<span class="review-status right">Correct</span>'
+        : '<span class="review-status wrong">Wrong</span>';
+
+    const optsHtml = ["A", "B", "C", "D"].map(letter => {
+      const text = it["option" + letter];
+      const textMr = it["option" + letter + "Mr"];
+      let cls = "";
+      let tag = "";
+      if (letter === it.correctAnswer) { cls = "correct"; tag = '<span class="tag-inline">Correct answer</span>'; }
+      if (letter === it.submittedAnswer && it.submittedAnswer !== it.correctAnswer) { cls = "wrong-pick"; tag = '<span class="tag-inline">Your answer</span>'; }
+      return `
+        <div class="review-opt ${cls}">
+          <span class="letter">${letter}</span>
+          <span>${text}${textMr ? `<br><span style="font-family:'Noto Sans Devanagari',sans-serif;font-size:13px;color:var(--ink-soft);">${textMr}</span>` : ""}</span>
+          ${tag}
+        </div>`;
+    }).join("");
+
+    return `
+      <div class="review-q">
+        <div class="review-q-meta"><span>Question ${num}</span>${status}</div>
+        <div class="review-q-text">${it.question}</div>
+        ${it.questionMr ? `<div class="review-q-text-mr">${it.questionMr}</div>` : ""}
+        ${optsHtml}
+      </div>`;
+  }).join("");
+}
+</script>
+</body>
+</html>
