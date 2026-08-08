@@ -59,17 +59,13 @@ function renderQuestion(idx) {
   document.getElementById("qMeta").textContent =
     `Question ${idx + 1} of ${EXAM.questions.length} · ${CONFIG.MARKS_PER_QUESTION} marks`;
 
-  const qTextEl = document.getElementById("qText");
-  qTextEl.innerHTML = "";
-  const enLine = document.createElement("div");
-  enLine.textContent = q.question;
-  qTextEl.appendChild(enLine);
-  if (q.questionMr) {
-    const mrLine = document.createElement("div");
-    mrLine.className = "q-text-mr";
-    mrLine.textContent = q.questionMr;
-    qTextEl.appendChild(mrLine);
-  }
+  // Show English and Marathi together. questionMr is only present if the
+  // backend has Marathi data for this question (see MarathiTranslations_All.gs);
+  // if it's missing we just fall back to English-only, so this never breaks
+  // for questions that haven't been translated yet.
+  const qText = document.getElementById("qText");
+  qText.innerHTML = escapeHtml(q.question) +
+    (q.questionMr ? `<div class="q-text-mr">${escapeHtml(q.questionMr)}</div>` : "");
 
   const optsWrap = document.getElementById("optionsWrap");
   optsWrap.innerHTML = "";
@@ -77,9 +73,10 @@ function renderQuestion(idx) {
     const div = document.createElement("div");
     const selected = EXAM.answers[q.qid] === letter;
     div.className = "option" + (selected ? " selected" : "");
-    const enText = q["option" + letter] || q[letter.toLowerCase()];
+    const enText = q["option" + letter] || q[letter.toLowerCase()] || "";
     const mrText = q["option" + letter + "Mr"];
-    div.innerHTML = `<span class="opt-letter">${letter}</span><span class="opt-text"><span class="opt-en">${enText}</span>${mrText ? `<span class="opt-mr">${mrText}</span>` : ""}</span>`;
+    div.innerHTML = `<span class="opt-letter">${letter}</span>
+      <span class="opt-text">${escapeHtml(enText)}${mrText ? `<br><span class="opt-mr">${escapeHtml(mrText)}</span>` : ""}</span>`;
     div.onclick = () => selectOption(letter);
     optsWrap.appendChild(div);
   });
@@ -96,6 +93,12 @@ function renderQuestion(idx) {
   document.getElementById("progressLabel").textContent = `${idx + 1} / ${EXAM.questions.length} answered so far: ${Object.keys(EXAM.answers).length}`;
 
   highlightGrid();
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str == null ? "" : String(str);
+  return div.innerHTML;
 }
 
 function selectOption(letter) {
