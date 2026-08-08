@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Your result — MahaRERA Practice Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -27,11 +29,16 @@
     <p>Loading your result…</p>
   </div>
 
-  <div class="card" style="max-width:640px;margin:0 auto 60px;" id="resultDetail"></div>
+  <div class="card" style="max-width:640px;margin:0 auto 40px;" id="resultDetail"></div>
+
+  <div class="panel" id="reviewPanel" style="max-width:820px;margin:0 auto 40px;display:none;">
+    <div class="panel-head"><h2>Review your answers</h2></div>
+    <div class="form-msg error" id="reviewError" style="display:none;"></div>
+    <div id="reviewList"><p class="small">Loading review…</p></div>
+  </div>
 
   <div class="text-center" style="margin-bottom:60px;">
     <a href="dashboard.html" class="btn btn-outline">Back to dashboard</a>
-    <a href="#" id="reviewBtn" class="btn btn-gold" style="margin-left:12px;">Review answers</a>
     <a href="exam.html" class="btn btn-primary" id="retakeBtn" style="margin-left:12px;">Retake test</a>
   </div>
 </div>
@@ -44,7 +51,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const params = new URLSearchParams(window.location.search);
   const examId = params.get("examId");
-  document.getElementById("reviewBtn").href = "review.html?examId=" + encodeURIComponent(examId || "");
   const hero = document.getElementById("resultHero");
   const detail = document.getElementById("resultDetail");
 
@@ -89,10 +95,84 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (r.attemptNumber >= CONFIG.MAX_ATTEMPTS) {
       document.getElementById("retakeBtn").style.display = "none";
     }
+
+    renderReview(examId);
   } catch (err) {
     hero.innerHTML = `<div class="form-msg error" style="display:block;max-width:480px;margin:0 auto;">${err.message}</div>`;
   }
 });
+
+// Pulls the full question-by-question breakdown for this attempt (question text,
+// the four options in both languages, what the user picked, and the correct
+// answer) and renders each one with the correct option highlighted green and
+// any wrong pick highlighted red, so the user can see exactly what they missed.
+async function renderReview(examId) {
+  const panel = document.getElementById("reviewPanel");
+  const listEl = document.getElementById("reviewList");
+  const errEl = document.getElementById("reviewError");
+  panel.style.display = "block";
+
+  try {
+    const rev = await api("getReview", { examId });
+    listEl.innerHTML = "";
+
+    if (!rev.items || rev.items.length === 0) {
+      listEl.innerHTML = '<p class="small">No question data available for this attempt.</p>';
+      return;
+    }
+
+    rev.items.forEach((item, i) => {
+      const wrap = document.createElement("div");
+      wrap.className = "review-item";
+
+      let statusTag;
+      if (!item.submittedAnswer) {
+        statusTag = '<span class="tag grey">Not answered</span>';
+      } else if (item.isCorrect) {
+        statusTag = '<span class="tag green">Correct</span>';
+      } else {
+        statusTag = '<span class="tag red">Incorrect</span>';
+      }
+
+      let optsHtml = "";
+      ["A", "B", "C", "D"].forEach(letter => {
+        const enText = item["option" + letter] || "";
+        const mrText = item["option" + letter + "Mr"];
+        let cls = "review-option";
+        if (letter === item.correctAnswer) cls += " correct";
+        else if (letter === item.submittedAnswer) cls += " incorrect";
+        optsHtml += `
+          <div class="${cls}">
+            <span class="opt-letter">${letter}</span>
+            <span>${escapeHtml(enText)}${mrText ? `<br><span class="opt-mr">${escapeHtml(mrText)}</span>` : ""}</span>
+          </div>`;
+      });
+
+      wrap.innerHTML = `
+        <div class="review-q-head">
+          <span class="review-q-num">Question ${i + 1}</span>
+          ${statusTag}
+        </div>
+        <div class="review-q-text">
+          ${escapeHtml(item.question)}
+          ${item.questionMr ? `<div class="q-text-mr">${escapeHtml(item.questionMr)}</div>` : ""}
+        </div>
+        <div class="review-options">${optsHtml}</div>
+      `;
+      listEl.appendChild(wrap);
+    });
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = "block";
+    listEl.innerHTML = "";
+  }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str == null ? "" : String(str);
+  return div.innerHTML;
+}
 </script>
 </body>
 </html>
