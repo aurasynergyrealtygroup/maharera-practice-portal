@@ -33,6 +33,11 @@
 
   <div class="panel" id="reviewPanel" style="max-width:820px;margin:0 auto 40px;display:none;">
     <div class="panel-head"><h2>Review your answers</h2></div>
+    <div class="review-legend">
+      <span><i class="legend-dot legend-blue"></i>Your answer</span>
+      <span><i class="legend-dot legend-green"></i>Correct answer</span>
+      <span><i class="legend-dot legend-red"></i>Wrong answer</span>
+    </div>
     <div class="form-msg error" id="reviewError" style="display:none;"></div>
     <div id="reviewList"><p class="small">Loading review…</p></div>
   </div>
@@ -138,13 +143,23 @@ async function renderReview(examId) {
       ["A", "B", "C", "D"].forEach(letter => {
         const enText = item["option" + letter] || "";
         const mrText = item["option" + letter + "Mr"];
+        const isYourAnswer = letter === item.submittedAnswer;
+        const isCorrectAnswer = letter === item.correctAnswer;
+
+        // Three independent signals, all shown at once rather than one hiding another:
+        // - green fill  = this is the correct answer
+        // - red fill    = this is what you picked, and it was wrong
+        // - blue outline + "Your answer" tag = this is what you picked, whether right or wrong
         let cls = "review-option";
-        if (letter === item.correctAnswer) cls += " correct";
-        else if (letter === item.submittedAnswer) cls += " incorrect";
+        if (isCorrectAnswer) cls += " correct";
+        else if (isYourAnswer) cls += " incorrect";
+        if (isYourAnswer) cls += " your-answer";
+
         optsHtml += `
           <div class="${cls}">
             <span class="opt-letter">${letter}</span>
-            <span>${escapeHtml(enText)}${mrText ? `<br><span class="opt-mr">${escapeHtml(mrText)}</span>` : ""}</span>
+            <span class="opt-text">${escapeHtml(enText)}${mrText ? `<br><span class="opt-mr">${escapeHtml(mrText)}</span>` : ""}</span>
+            ${isYourAnswer ? '<span class="your-answer-tag">Your answer</span>' : ""}
           </div>`;
       });
 
