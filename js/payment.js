@@ -24,7 +24,7 @@ document.getElementById("payBtn")?.addEventListener("click", async () => {
       amount: order.amount,
       currency: "INR",
       name: "MahaRERA Practice Portal",
-      description: "Practice test access — 5 attempts",
+      description: "Practice test access — 10 attempts",
       order_id: order.orderId,
       prefill: { name: getUser().name, contact: getUser().mobile, email: getUser().email },
       theme: { color: "#0F2A3D" },
